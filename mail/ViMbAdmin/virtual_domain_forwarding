@@ -1,0 +1,5 @@
+user = vimbadmin
+password = yourpasshere
+hosts = 127.0.0.1
+dbname = vimbadmin
+query = SELECT SUBSTRING(goto,LOCATE('@',goto)) AS goto FROM alias WHERE address='*@%d' AND 1 = ( (SELECT count(Domain_id) FROM mailbox WHERE username = CONCAT('%u', (SELECT SUBSTRING(goto, LOCATE('@', goto)) AS goto FROM alias WHERE address='*@%d'))) OR (SELECT count(Domain_id) FROM alias WHERE address = CONCAT('%u', (SELECT SUBSTRING(goto, LOCATE('@', goto)) AS goto FROM alias WHERE address='*@%d'))) );

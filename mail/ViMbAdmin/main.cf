@@ -1,0 +1,4 @@
+virtual_transport       = lmtp:unix:private/dovecot-lmtp 
+virtual_alias_maps      = mysql:$config_directory/virtual_domain_forwarding,mysql:$config_directory/virtual_alias
+virtual_mailbox_domains = mysql:$config_directory/virtual_domains
+virtual_mailbox_maps    = mysql:$config_directory/virtual

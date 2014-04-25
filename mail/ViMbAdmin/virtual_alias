@@ -1,0 +1,5 @@
+user = vimbadmin
+password = yourpasshere
+hosts = 127.0.0.1
+dbname = vimbadmin
+query = SELECT goto FROM alias WHERE address = '%s' AND active = '1' and substring(address, 1, 1) <> '*'

@@ -1,0 +1,15 @@
+driver = mysql
+ 
+connect = host=127.0.0.1 user=vimbadmin password=yourpasshere dbname=vimbadmin
+default_pass_scheme = MD5-CRYPT
+ 
+password_query = SELECT username AS user, password AS password, \
+        homedir AS userdb_home, maildir AS userbd_mail, \
+        concat('*:bytes=', quota) as quota_rule, uid AS userdb_uid, gid AS userdb_gid \
+    FROM mailbox \
+        WHERE username = '%u' AND active = '1' \
+            AND ( access_restriction = 'ALL' OR LOCATE( access_restriction, '%Us' ) > 0 )
+ 
+user_query = SELECT homedir AS home, maildir AS mail, \
+        concat('*:bytes=', quota) as quota_rule, uid, gid \
+    FROM mailbox WHERE username = '%u'

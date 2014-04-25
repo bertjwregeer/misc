@@ -1,0 +1,27 @@
+# Try this first ...
+passdb {
+  driver = sql
+  args = /usr/local/etc/dovecot/dovecot-sql.conf.ext
+}
+
+# Well that failed, so let's try and see if the user is trying to login using an alias
+passdb {
+  driver = sql
+  args = /usr/local/etc/dovecot/dovecot-alias-sql.conf.ext
+}
+
+userdb {
+  driver = prefetch
+}
+
+# Try this first
+userdb {
+  driver = sql
+  args = /usr/local/etc/dovecot/dovecot-sql.conf.ext
+}
+
+# Maybe user tried an alias?
+userdb {
+  driver = sql
+  args = /usr/local/etc/dovecot/dovecot-alias-sql.conf.ext
+}
