@@ -1,0 +1,119 @@
+#!/bin/sh
+#
+# PROVIDE: mysql
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# Add the following lines to /etc/rc.conf to enable mysqlmulti:
+#
+# mysqlmulti_enable (bool):		Set it to "YES" to enable uwsgi
+#				Default is "NO".
+# mysqlmulti_limits (bool):	Set to "NO" by default.
+#			Set it to yes to run `limits -e -U mysqlmulti`
+#			just before mysqlmulti starts.
+# mysqlmulti_dbdir (str):	Default to "/var/db/mysql"
+#			Base database directory.
+# mysqlmulti_pidfile (str):	Custum PID file path and name.
+#			Default to "${mysqlmulti_dbdir}/${hostname}.pid".
+# mysqlmulti_args (str):	Custom additional arguments to be passed
+#			to mysqlmultid_safe (default empty).
+# mysqlmulti_user (str):    User to start MySQL server as (default: mysql)
+#
+# If you would like to have multiple mysqlmulti instances running, you can
+# define multiple profiles:
+#
+# mysqlmulti_profiles (str):		Set the list of mysqlmulti profiles
+#				Default is "".
+#
+# For each profile you can then define different options (except for
+# mysqlmulti_enable) using the syntax uwsgi_<profile>_<option>
+
+. /etc/rc.subr
+
+name="mysqlmulti"
+rcvar=mysqlmulti_enable
+
+load_rc_config $name
+
+: ${mysqlmulti_enable="NO"}
+: ${mysqlmulti_profiles=""}
+: ${mysqlmulti_limits="NO"}
+: ${mysqlmulti_dbdir="/var/db/mysql"}
+: ${mysqlmulti_user="mysql"}
+
+is_mysqlmulti_profile() {
+    local profile
+
+    for profile in $mysqlmulti_profiles; do
+        if [ "$profile" = "$1" ]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+if [ -n "${mysqlmulti_profiles}" ]; then
+
+	if [ -n "$2" ]; then
+		profile="$2"
+		if ! is_mysqlmulti_profile $profile; then
+			echo "$0: no such profile defined in mysqlmulti_profile"
+		        exit 1
+		fi
+
+		eval mysqlmulti_limits=\${mysqlmulti_${profile}_limits:-"${mysqlmulti_limits}"}
+		eval mysqlmulti_dbdir=\${mysqlmulti_${profile}_dbdir:-"${mysqlmulti_dbdir}"}
+		eval mysqlmulti_args=\${mysqlmulti_${profile}_args:-"${mysqlmulti_args}"}
+		eval mysqlmulti_pidfile=\${mysqlmulti_${profile}_pidfile:-"${mysqlmulti_pidfile}"}
+		eval mysqlmulti_user=\${mysqlmulti_${profile}_user:-"${mysqlmulti_user}"}
+
+	elif [ -n "$1" ]; then
+		for profile in ${mysqlmulti_profiles}; do
+	            echo "Processing ${name} profile: ${profile}"
+	            /usr/local/etc/rc.d/mysql-server-multi $1 ${profile}
+	        done
+	        exit 0
+	fi
+fi
+
+mysql_limits_args="-e -U ${mysqlmulti_user}"
+pidfile=${mysqlmulti_pidfile:-"${mysqlmulti_dbdir}/`/bin/hostname`.pid"}
+command="/usr/sbin/daemon"
+command_args="-c -f /usr/local/bin/mysqld_safe --defaults-extra-file=${mysqlmulti_dbdir}/my.cnf --user=${mysqlmulti_user} --datadir=${mysqlmulti_dbdir} --pid-file=${pidfile} ${mysqlmulti_args}"
+procname="/usr/local/libexec/mysqld"
+start_precmd="${name}_prestart"
+start_postcmd="${name}_poststart"
+mysql_install_db="/usr/local/bin/mysql_install_db"
+mysql_install_db_args="--basedir=/usr/local --datadir=${mysqlmulti_dbdir} --force"
+
+mysqlmulti_create_auth_tables()
+{
+	eval $mysql_install_db $mysql_install_db_args >/dev/null 2>/dev/null
+        [ $? -eq 0 ] && chown -R ${mysqlmulti_user}:${mysqlmulti_user} ${mysqlmulti_dbdir}
+}
+
+mysqlmulti_prestart()
+{
+	if [ ! -d "${mysqlmulti_dbdir}/mysql/." ]; then
+		mysqlmulti_create_auth_tables || return 1
+	fi
+	if checkyesno mysqlmulti_limits; then
+		eval `/usr/bin/limits ${mysql_limits_args}` 2>/dev/null
+	else
+		return 0
+	fi
+}
+
+mysqlmulti_poststart()
+{
+	local timeout=15
+	while [ ! -f "${pidfile}" -a ${timeout} -gt 0 ]; do
+		timeout=$(( timeout - 1 ))
+		sleep 1
+	done
+	return 0
+}
+
+run_rc_command "$1"
+
